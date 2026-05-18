@@ -1,13 +1,6 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import MyTrip from '../../components/Mytrip/Mytrip'; // Adjust the path if needed
-import Chat from '../../components/Chat/Chat'; // Adjust the path if needed
+import React from 'react'
+import Chat from '@/components/Chat/Chat'
 
-const Tab = createBottomTabNavigator();
-
-export default function Tabs() {
-  return (
-    <Tab.Navigator>
-      <Tab.Screen name="Chat" component={Chat} options={{ title: 'Chat' }} />
-    </Tab.Navigator>
-  );
+export default function ChatTab() {
+  return <Chat />
 }

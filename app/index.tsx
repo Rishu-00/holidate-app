@@ -5,7 +5,7 @@ import { View, ActivityIndicator } from "react-native";
 import { auth } from "@/configs/firebaseConfig";
 
 export default function Index() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function Index() {
   return (
     <View style={{ flex: 1 }}>
       {user ? (
-        <Redirect href={"/(tabs)"} />
+        <Redirect href={"/(tabs)/discover"as any} />
       ) : (
         <Login />
       )}

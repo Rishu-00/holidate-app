@@ -1,22 +1,16 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "AIzaSyDhBkUiVv9EHHmY4_Ln3vxvX1nWLYTUdO8",
-    authDomain: "holidates-c0b86.firebaseapp.com",
-    projectId: "holidates-c0b86",
-    storageBucket: "holidates-c0b86.appspot.com",
-    messagingSenderId: "521191401750",
-    appId: "1:521191401750:web:04cdf4a6a8a3c19c698837"
-  };
+  apiKey: "AIzaSyB1R2hZq0uFJISrvkDeK5v3eLNYJWOBwEw",
+  authDomain: "holidate-app-2ef1c.firebaseapp.com",
+  projectId: "holidate-app-2ef1c",
+  storageBucket: "holidate-app-2ef1c.firebasestorage.app",
+  messagingSenderId: "772468717583",
+  appId: "1:772468717583:web:128966345f6f3638a20b7a"
+};
 
-// Initialize Firebase
-export const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-// export const db = getFirestore(app);
+export const db = getFirestore(app);
