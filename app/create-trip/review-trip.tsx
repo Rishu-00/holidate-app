@@ -1,7 +1,6 @@
 import React, { useContext, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
-import { Colors } from '@/constants/Colors';
 import { CreateTripContext } from '@/context/CreateTripContext';
 import ReviewCard from '@/components/CreateTrip/ReviewCard';
 
@@ -18,75 +17,171 @@ export default function ReviewTrip() {
         navigation.setOptions({
             headerShown: true,
             headerTransparent: true,
-            headerTitle: 'Review Trip',
+            headerTitle: 'Review Your Trip',
+            headerStyle: { backgroundColor: '#0D0D0F' },
+            headerTintColor: '#F0EEE8',
+            headerTitleStyle: { color: '#F0EEE8', fontWeight: '700' },
         });
     }, []);
 
-    // Extract and format trip data
-    const { location, travelDuration, travelers, budget } = tripData;
-    const startDate = new Date(travelDuration?.startDate);
-    const endDate = new Date(travelDuration?.endDate);
-    const travelDates = `${startDate?.getDate()} ${startDate?.toLocaleString('default', { month: 'short' })} to ${endDate?.getDate()} ${endDate?.toLocaleString('default', { month: 'short' })} (${travelDuration?.totalTravelDays} days)`;
-    const travelPartners = `${travelers?.title} (${travelers?.people} members)`;
-    const travelBudget = `${budget?.title} Spending`;
+    // Extract and format trip data — handle both location and locationinfo
+    const location = tripData?.locationinfo || tripData?.location;
+    const travelDuration = tripData?.travelDuration;
+    const travelers = tripData?.travelers;
+    const budget = tripData?.budget;
+
+    const startDate = travelDuration?.startDate ? new Date(travelDuration.startDate) : null;
+    const endDate = travelDuration?.endDate ? new Date(travelDuration.endDate) : null;
+    
+    const travelDates = startDate && endDate
+        ? `${startDate.getDate()} ${startDate.toLocaleString('default', { month: 'short' })} to ${endDate.getDate()} ${endDate.toLocaleString('default', { month: 'short' })} (${travelDuration.totalTravelDays} days)`
+        : 'Dates not selected';
+    
+    const travelPartners = travelers
+        ? `${travelers.title} (${travelers.people} members)`
+        : 'Partners not selected';
+    
+    const travelBudget = budget
+        ? `${budget.title} Spending`
+        : 'Budget not selected';
+
+    const locationName = location?.name || 'Destination not selected';
 
     const buildTrip = () => {
         router.push("/create-trip/generate-trip");
     };
 
     return (
-        <View style={styles.page}>
-            <Text style={styles.title}>Review Your Trip</Text>
-            <Text style={styles.subtitle}>Before generating your trip, please review your selections.</Text>
-            <ReviewCard icon="📍" heading="Destination" desc={location.name} />
-            <View style={styles.divider}></View>
-            <ReviewCard icon="🗓️" heading="Travel Dates" desc={travelDates} />
-            <View style={styles.divider}></View>
-            <ReviewCard icon="👥" heading="Travel Partners" desc={travelPartners} />
-            <View style={styles.divider}></View>
-            <ReviewCard icon="💰" heading="Budget" desc={travelBudget} />
-            <View style={{ flex: 1 }}></View>
+        <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+            <View style={styles.header}>
+                <Text style={styles.title}>Review Your Trip ✈️</Text>
+                <Text style={styles.subtitle}>
+                    Before we generate your itinerary, please review your selections.
+                </Text>
+            </View>
+
+            {/* Cards */}
+            <View style={styles.cardsContainer}>
+                <ReviewCard 
+                    icon="📍" 
+                    heading="Destination" 
+                    desc={locationName} 
+                />
+                
+                <View style={styles.divider}></View>
+                
+                <ReviewCard 
+                    icon="🗓️" 
+                    heading="Travel Dates" 
+                    desc={travelDates} 
+                />
+                
+                <View style={styles.divider}></View>
+                
+                <ReviewCard 
+                    icon="👥" 
+                    heading="Travelers" 
+                    desc={travelPartners} 
+                />
+                
+                <View style={styles.divider}></View>
+                
+                <ReviewCard 
+                    icon="💰" 
+                    heading="Budget" 
+                    desc={travelBudget} 
+                />
+            </View>
+
+            {/* Info Box */}
+            <View style={styles.infoBox}>
+                <Text style={styles.infoEmoji}>🤖</Text>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.infoTitle}>AI-Powered Itinerary</Text>
+                    <Text style={styles.infoText}>
+                        We'll generate a complete trip plan with flights, hotels, and activities tailored to your preferences.
+                    </Text>
+                </View>
+            </View>
+
+            {/* Build Button */}
             <TouchableOpacity onPress={buildTrip} style={styles.button}>
                 <Text style={styles.buttonText}>Build My Trip ⚙️</Text>
             </TouchableOpacity>
-        </View>
+
+            <View style={{ height: 20 }} />
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
     page: {
-        padding: 25,
-        paddingTop: 100,
         flex: 1,
-        backgroundColor: Colors.WHITE,
+        backgroundColor: '#0D0D0F',
+        paddingHorizontal: 24,
+        paddingTop: 110,
+    },
+    header: {
+        marginBottom: 24,
     },
     title: {
-        fontSize: 30,
-        fontFamily: 'outfit-bold',
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#F0EEE8',
+        marginBottom: 4,
     },
     subtitle: {
-        fontSize: 17,
-        fontFamily: 'outfit-medium',
-        color: Colors.GRAY,
+        fontSize: 14,
+        color: '#6A6865',
+        lineHeight: 20,
+    },
+    cardsContainer: {
+        backgroundColor: '#1E1E23',
+        borderRadius: 18,
+        padding: 20,
+        borderWidth: 0.5,
+        borderColor: '#2A2A30',
         marginBottom: 20,
     },
     divider: {
-        borderWidth: 1,
-        borderColor: Colors.LIGHT_GRAY,
-        borderRadius: 20,
+        height: 0.5,
+        backgroundColor: '#2A2A30',
+        marginVertical: 14,
+    },
+    infoBox: {
+        flexDirection: 'row',
+        gap: 12,
+        backgroundColor: '#1C1A10',
+        borderRadius: 14,
+        padding: 16,
+        borderWidth: 0.5,
+        borderColor: '#C9A84C',
+        marginBottom: 20,
+    },
+    infoEmoji: {
+        fontSize: 24,
+    },
+    infoTitle: {
+        color: '#E8C97A',
+        fontSize: 13,
+        fontWeight: '700',
+        marginBottom: 2,
+    },
+    infoText: {
+        color: '#6A6865',
+        fontSize: 12,
+        lineHeight: 16,
     },
     button: {
-        backgroundColor: Colors.BLACK,
-        padding: 15,
-        borderRadius: 15,
-        marginTop: 20,
+        backgroundColor: '#C9A84C',
+        padding: 16,
+        borderRadius: 50,
         alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 5,
+        marginBottom: 20,
     },
     buttonText: {
-        fontSize: 18,
-        fontFamily: 'outfit',
-        color: Colors.WHITE,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#0D0D0F',
     },
 });

@@ -1,53 +1,102 @@
-import { View, Text, ScrollView, 
-TouchableOpacity, StyleSheet, Modal,
-TextInput } from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, ScrollView, TouchableOpacity,
+StyleSheet, Modal, TextInput, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect } from 'react'
 import { FontAwesome } from '@expo/vector-icons'
+import { collection, addDoc, getDocs, query, 
+where, deleteDoc, doc } from 'firebase/firestore'
+import { auth, db } from '@/configs/firebaseConfig'
 
 const categories = [
-  { label: 'Flights', color: '#C9A84C', emoji: '✈️', amount: 24500 },
-  { label: 'Hotels', color: '#378ADD', emoji: '🏨', amount: 14200 },
-  { label: 'Food', color: '#1D9E75', emoji: '🍽️', amount: 5800 },
-  { label: 'Activities', color: '#D85A30', emoji: '🎯', amount: 3700 },
-  { label: 'Transport', color: '#7F77DD', emoji: '🚗', amount: 0 },
+  { label: 'Flights', color: '#C9A84C', emoji: '✈️' },
+  { label: 'Hotels', color: '#378ADD', emoji: '🏨' },
+  { label: 'Food', color: '#1D9E75', emoji: '🍽️' },
+  { label: 'Activities', color: '#D85A30', emoji: '🎯' },
+  { label: 'Transport', color: '#7F77DD', emoji: '🚗' },
+  { label: 'Shopping', color: '#E85454', emoji: '🛍️' },
+  { label: 'Other', color: '#A8A6A0', emoji: '💸' },
 ]
 
 export default function Budget() {
   const [modal, setModal] = useState(false)
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
-  const [expenses, setExpenses] = useState([
-    { id: 1, label: 'Flight DEL→DPS', amount: 24500, emoji: '✈️', date: 'Dec 20' },
-    { id: 2, label: 'Mulia Resort', amount: 14200, emoji: '🏨', date: 'Dec 20' },
-    { id: 3, label: 'Warung Mak Beng', amount: 850, emoji: '🍽️', date: 'Dec 21' },
-    { id: 4, label: 'Ubud Rafting', amount: 3700, emoji: '🎯', date: 'Dec 22' },
-  ])
+  const [selectedCat, setSelectedCat] = useState(categories[0])
+  const [expenses, setExpenses] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [totalBudget] = useState(70000)
+  const user = auth.currentUser
 
-  const total = 70000
-  const spent = expenses.reduce((sum, e) => sum + e.amount, 0)
-  const remaining = total - spent
-  const percent = Math.round((spent / total) * 100)
+  useEffect(() => {
+    fetchExpenses()
+  }, [])
 
-  const addExpense = () => {
-    if (!amount) return
-    setExpenses(prev => [...prev, {
-      id: Date.now(),
-      label: note || 'New Expense',
-      amount: parseInt(amount),
-      emoji: '💸',
-      date: 'Today'
-    }])
-    setAmount('')
-    setNote('')
-    setModal(false)
+  const fetchExpenses = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const q = query(
+        collection(db, 'expenses'),
+        where('userEmail', '==', user.email)
+      )
+      const snapshot = await getDocs(q)
+      const data: any[] = []
+      snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }))
+      setExpenses(data)
+    } catch (err) {
+      console.log('Fetch error:', err)
+    }
+    setLoading(false)
   }
+
+  const addExpense = async () => {
+    if (!amount || !user) return
+    setLoading(true)
+    try {
+      await addDoc(collection(db, 'expenses'), {
+        userEmail: user.email,
+        amount: parseInt(amount),
+        note: note || selectedCat.label,
+        category: selectedCat.label,
+        emoji: selectedCat.emoji,
+        color: selectedCat.color,
+        date: new Date().toLocaleDateString('en-IN', 
+          { day: 'numeric', month: 'short' }),
+        createdAt: new Date().toISOString(),
+      })
+      setAmount('')
+      setNote('')
+      setModal(false)
+      fetchExpenses()
+    } catch (err) {
+      console.log('Add error:', err)
+    }
+    setLoading(false)
+  }
+
+  const deleteExpense = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'expenses', id))
+      fetchExpenses()
+    } catch (err) {
+      console.log('Delete error:', err)
+    }
+  }
+
+  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const remaining = totalBudget - totalSpent
+  const percent = Math.min(Math.round((totalSpent / totalBudget) * 100), 100)
+
+  const getCategoryTotal = (label: string) =>
+    expenses.filter(e => e.category === label)
+      .reduce((sum, e) => sum + e.amount, 0)
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Budget Tracker 💰</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModal(true)}>
+        <TouchableOpacity style={styles.addBtn}
+          onPress={() => setModal(true)}>
           <FontAwesome name="plus" size={16} color="#0D0D0F" />
         </TouchableOpacity>
       </View>
@@ -55,53 +104,94 @@ export default function Budget() {
       {/* Total Card */}
       <View style={styles.totalCard}>
         <Text style={styles.totalLabel}>Total Spent</Text>
-        <Text style={styles.totalAmount}>₹{spent.toLocaleString()}</Text>
-        <Text style={styles.totalSub}>of ₹{total.toLocaleString()} budget · Bali Trip</Text>
-
-        {/* Progress Bar */}
+        <Text style={styles.totalAmount}>
+          ₹{totalSpent.toLocaleString()}
+        </Text>
+        <Text style={styles.totalSub}>
+          of ₹{totalBudget.toLocaleString()} budget
+        </Text>
         <View style={styles.progressBg}>
-          <View style={[styles.progressFill, { width: `${percent}%` }]} />
+          <View style={[styles.progressFill,
+            { width: `${percent}%` as any,
+              backgroundColor: percent > 90 ? '#E85454' : '#C9A84C' }]} />
         </View>
         <View style={styles.progressLabels}>
           <Text style={styles.progressLeft}>{percent}% used</Text>
-          <Text style={styles.progressRight}>₹{remaining.toLocaleString()} left</Text>
+          <Text style={[styles.progressRight,
+            { color: remaining < 0 ? '#E85454' : '#5DCAA5' }]}>
+            {remaining < 0
+              ? `₹${Math.abs(remaining).toLocaleString()} over!`
+              : `₹${remaining.toLocaleString()} left`}
+          </Text>
         </View>
       </View>
 
       {/* Category Breakdown */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>By Category</Text>
-        {categories.map((cat, idx) => (
-          <View key={idx} style={styles.catRow}>
-            <View style={[styles.catDot, { backgroundColor: cat.color }]} />
-            <Text style={styles.catEmoji}>{cat.emoji}</Text>
-            <Text style={styles.catLabel}>{cat.label}</Text>
-            <View style={styles.catBarBg}>
-              <View style={[styles.catBarFill, {
-                width: cat.amount > 0 ? `${Math.round((cat.amount / spent) * 100)}%` : '0%',
-                backgroundColor: cat.color
-              }]} />
+        {categories.map((cat, idx) => {
+          const catTotal = getCategoryTotal(cat.label)
+          const catPercent = totalSpent > 0
+            ? Math.round((catTotal / totalSpent) * 100) : 0
+          return (
+            <View key={idx} style={styles.catRow}>
+              <View style={[styles.catDot,
+                { backgroundColor: cat.color }]} />
+              <Text style={styles.catEmoji}>{cat.emoji}</Text>
+              <Text style={styles.catLabel}>{cat.label}</Text>
+              <View style={styles.catBarBg}>
+                <View style={[styles.catBarFill, {
+                  width: `${catPercent}%` as any,
+                  backgroundColor: cat.color
+                }]} />
+              </View>
+              <Text style={styles.catAmount}>
+                {catTotal > 0
+                  ? `₹${catTotal.toLocaleString()}` : '—'}
+              </Text>
             </View>
-            <Text style={styles.catAmount}>
-              {cat.amount > 0 ? `₹${cat.amount.toLocaleString()}` : '—'}
-            </Text>
-          </View>
-        ))}
+          )
+        })}
       </View>
 
       {/* Recent Expenses */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Expenses</Text>
-        {expenses.map((exp) => (
+        <Text style={styles.sectionTitle}>
+          Recent Expenses ({expenses.length})
+        </Text>
+        {loading && (
+          <ActivityIndicator color="#C9A84C" style={{ marginTop: 20 }} />
+        )}
+        {!loading && expenses.length === 0 && (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>
+              No expenses yet — add your first one! 💸
+            </Text>
+          </View>
+        )}
+        {expenses
+          .sort((a, b) => new Date(b.createdAt).getTime() 
+            - new Date(a.createdAt).getTime())
+          .map((exp) => (
           <View key={exp.id} style={styles.expenseCard}>
-            <View style={styles.expenseIcon}>
+            <View style={[styles.expenseIcon,
+              { backgroundColor: exp.color + '22' }]}>
               <Text style={{ fontSize: 20 }}>{exp.emoji}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.expenseLabel}>{exp.label}</Text>
-              <Text style={styles.expenseDate}>{exp.date}</Text>
+              <Text style={styles.expenseLabel}>{exp.note}</Text>
+              <Text style={styles.expenseDate}>
+                {exp.category} · {exp.date}
+              </Text>
             </View>
-            <Text style={styles.expenseAmount}>₹{exp.amount.toLocaleString()}</Text>
+            <Text style={styles.expenseAmount}>
+              ₹{exp.amount.toLocaleString()}
+            </Text>
+            <TouchableOpacity
+              onPress={() => deleteExpense(exp.id)}
+              style={styles.deleteBtn}>
+              <FontAwesome name="trash-o" size={14} color="#E85454" />
+            </TouchableOpacity>
           </View>
         ))}
       </View>
@@ -112,28 +202,66 @@ export default function Budget() {
       <Modal visible={modal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Log Expense</Text>
+            <Text style={styles.modalTitle}>Log Expense 💸</Text>
 
+            {/* Category Selector */}
+            <Text style={styles.modalLabel}>Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: 14 }}
+              contentContainerStyle={{ gap: 8 }}>
+              {categories.map((cat, idx) => (
+                <TouchableOpacity key={idx}
+                  style={[styles.catChip,
+                    selectedCat.label === cat.label && {
+                      backgroundColor: cat.color,
+                      borderColor: cat.color
+                    }]}
+                  onPress={() => setSelectedCat(cat)}>
+                  <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
+                  <Text style={[styles.catChipText,
+                    selectedCat.label === cat.label 
+                      && { color: '#0D0D0F' }]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.modalLabel}>Amount (₹)</Text>
             <TextInput
               style={styles.input}
-              placeholder="Amount (₹)"
+              placeholder="Enter amount"
               placeholderTextColor="#6A6865"
               keyboardType="numeric"
               value={amount}
               onChangeText={setAmount}
             />
+
+            <Text style={styles.modalLabel}>Note (optional)</Text>
             <TextInput
               style={styles.input}
-              placeholder="Note (optional)"
+              placeholder="e.g. Flight to Bali"
               placeholderTextColor="#6A6865"
               value={note}
               onChangeText={setNote}
             />
 
-            <TouchableOpacity style={styles.submitBtn} onPress={addExpense}>
-              <Text style={styles.submitText}>Add Expense</Text>
+            <TouchableOpacity
+              style={[styles.submitBtn,
+                loading && { opacity: 0.6 }]}
+              onPress={addExpense}
+              disabled={loading}>
+              {loading
+                ? <ActivityIndicator color="#0D0D0F" />
+                : <Text style={styles.submitText}>Add Expense</Text>
+              }
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setModal(false)}>
+
+            <TouchableOpacity onPress={() => {
+              setModal(false)
+              setAmount('')
+              setNote('')
+            }}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -149,23 +277,26 @@ const styles = StyleSheet.create({
     alignItems: 'center', padding: 20, paddingTop: 60 },
   title: { color: '#F0EEE8', fontSize: 22, fontWeight: '700' },
   addBtn: { width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
+    backgroundColor: '#C9A84C', alignItems: 'center',
+    justifyContent: 'center' },
   totalCard: { marginHorizontal: 20, backgroundColor: '#1C1A10',
     borderRadius: 20, padding: 24, borderWidth: 0.5,
     borderColor: '#C9A84C', marginBottom: 24 },
   totalLabel: { color: '#A8A6A0', fontSize: 13, textAlign: 'center' },
-  totalAmount: { color: '#E8C97A', fontSize: 42, fontWeight: '700',
+  totalAmount: { color: '#E8C97A', fontSize: 42,
+    fontWeight: '700', textAlign: 'center', marginTop: 4 },
+  totalSub: { color: '#6A6865', fontSize: 12,
     textAlign: 'center', marginTop: 4 },
-  totalSub: { color: '#6A6865', fontSize: 12, textAlign: 'center', marginTop: 4 },
   progressBg: { height: 6, backgroundColor: '#26262D',
     borderRadius: 4, marginTop: 20, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 4,
-    backgroundColor: '#C9A84C' },
-  progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  progressFill: { height: '100%', borderRadius: 4 },
+  progressLabels: { flexDirection: 'row',
+    justifyContent: 'space-between', marginTop: 8 },
   progressLeft: { color: '#A8A6A0', fontSize: 11 },
-  progressRight: { color: '#5DCAA5', fontSize: 11 },
+  progressRight: { fontSize: 11, fontWeight: '600' },
   section: { paddingHorizontal: 20, marginBottom: 24 },
-  sectionTitle: { color: '#F0EEE8', fontSize: 15, fontWeight: '600', marginBottom: 14 },
+  sectionTitle: { color: '#F0EEE8', fontSize: 15,
+    fontWeight: '600', marginBottom: 14 },
   catRow: { flexDirection: 'row', alignItems: 'center',
     gap: 8, marginBottom: 14 },
   catDot: { width: 10, height: 10, borderRadius: 5 },
@@ -176,26 +307,39 @@ const styles = StyleSheet.create({
   catBarFill: { height: '100%', borderRadius: 2 },
   catAmount: { color: '#F0EEE8', fontSize: 12,
     fontWeight: '600', width: 70, textAlign: 'right' },
+  emptyBox: { backgroundColor: '#1E1E23', borderRadius: 14,
+    padding: 20, alignItems: 'center',
+    borderWidth: 0.5, borderColor: '#2A2A30' },
+  emptyText: { color: '#6A6865', fontSize: 13, textAlign: 'center' },
   expenseCard: { flexDirection: 'row', alignItems: 'center',
     gap: 12, backgroundColor: '#1E1E23', borderRadius: 14,
-    padding: 14, marginBottom: 10, borderWidth: 0.5, borderColor: '#2A2A30' },
+    padding: 14, marginBottom: 10,
+    borderWidth: 0.5, borderColor: '#2A2A30' },
   expenseIcon: { width: 44, height: 44, borderRadius: 10,
-    backgroundColor: '#26262D', alignItems: 'center', justifyContent: 'center' },
+    alignItems: 'center', justifyContent: 'center' },
   expenseLabel: { color: '#F0EEE8', fontSize: 13, fontWeight: '500' },
   expenseDate: { color: '#6A6865', fontSize: 11, marginTop: 2 },
   expenseAmount: { color: '#E8C97A', fontSize: 14, fontWeight: '700' },
+  deleteBtn: { padding: 4 },
   modalOverlay: { flex: 1, backgroundColor: '#00000088',
     justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#161619', borderTopLeftRadius: 24,
-    borderTopRightRadius: 24, padding: 28,
-    borderTopWidth: 0.5, borderColor: '#2A2A30' },
-  modalTitle: { color: '#F0EEE8', fontSize: 18,
-    fontWeight: '700', marginBottom: 20 },
+  modalCard: { backgroundColor: '#161619',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 28, borderTopWidth: 0.5, borderColor: '#2A2A30' },
+  modalTitle: { color: '#F0EEE8', fontSize: 20,
+    fontWeight: '700', marginBottom: 16 },
+  modalLabel: { color: '#A8A6A0', fontSize: 12,
+    marginBottom: 8, fontWeight: '600' },
+  catChip: { flexDirection: 'row', alignItems: 'center',
+    gap: 6, backgroundColor: '#1E1E23', borderRadius: 50,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 0.5, borderColor: '#2A2A30' },
+  catChipText: { color: '#A8A6A0', fontSize: 12 },
   input: { backgroundColor: '#1E1E23', borderRadius: 12,
     padding: 14, color: '#F0EEE8', fontSize: 14,
-    borderWidth: 0.5, borderColor: '#2A2A30', marginBottom: 12 },
+    borderWidth: 0.5, borderColor: '#2A2A30', marginBottom: 14 },
   submitBtn: { backgroundColor: '#C9A84C', borderRadius: 50,
-    padding: 14, alignItems: 'center', marginTop: 8 },
+    padding: 15, alignItems: 'center', marginBottom: 4 },
   submitText: { color: '#0D0D0F', fontSize: 15, fontWeight: '700' },
   cancelText: { color: '#6A6865', fontSize: 14,
     textAlign: 'center', marginTop: 14 },

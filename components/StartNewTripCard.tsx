@@ -1,27 +1,26 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React from 'react'
-import { Entypo } from '@expo/vector-icons'
-import { Colors } from '@/constants/Colors'
+import { FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 
 export default function StartNewTripCard() {
     const router = useRouter();
 
-    const navigateToSearchPlaceScreen = () => {
-        router.push("/create-trip/search-place")
-    }
-
     return (
         <View style={styles.container}>
-            <Entypo name="location" size={50} color="black" />
+            <View style={styles.iconBox}>
+                <Text style={styles.iconEmoji}>🗺️</Text>
+            </View>
             <Text style={styles.title}>No Trips Planned Yet</Text>
-            <Text style={styles.subTitle}>It's time to set your travel dreams in motion! Click the button below to begin crafting your unforgettable journey.</Text>
+            <Text style={styles.subTitle}>
+                It's time to set your travel dreams in motion! 
+                Start crafting your unforgettable journey.
+            </Text>
             <TouchableOpacity
-                onPress={navigateToSearchPlaceScreen}
+                onPress={() => router.push("/create-trip/search-place")}
                 style={styles.button}>
-                <Text style={styles.buttonText}>
-                    Start a New Trip
-                </Text>
+                <FontAwesome name="plus" size={16} color="#0D0D0F" />
+                <Text style={styles.buttonText}>Start a New Trip</Text>
             </TouchableOpacity>
         </View>
     )
@@ -29,37 +28,49 @@ export default function StartNewTripCard() {
 
 const styles = StyleSheet.create({
     container: {
-        paddingVertical: 10,
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 20,
-        backgroundColor: Colors.WHITE,
+        gap: 16,
+        paddingHorizontal: 24,
+        backgroundColor: '#0D0D0F',
     },
+    iconBox: {
+        width: 100, height: 100,
+        borderRadius: 50,
+        backgroundColor: '#1E1E23',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 0.5,
+        borderColor: '#C9A84C',
+        marginBottom: 8,
+    },
+    iconEmoji: { fontSize: 48 },
     title: {
-        fontSize: 30,
-        fontFamily: 'outfit-bold',
-        color: Colors.BLACK,
-    },
-    subTitle: {
-        fontSize: 17,
-        fontFamily: 'outfit-bold',
-        color: Colors.GRAY,
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#F0EEE8',
         textAlign: 'center',
     },
+    subTitle: {
+        fontSize: 14,
+        color: '#6A6865',
+        textAlign: 'center',
+        lineHeight: 22,
+    },
     button: {
-        backgroundColor: Colors.BLACK,
-        padding: 15,
-        borderRadius: 15,
-        marginTop: 20,
-        width: '70%',
+        flexDirection: 'row',
         alignItems: 'center',
-        elevation: 5,
+        gap: 8,
+        backgroundColor: '#C9A84C',
+        paddingVertical: 14,
+        paddingHorizontal: 32,
+        borderRadius: 50,
+        marginTop: 10,
     },
     buttonText: {
-        fontSize: 17,
-        fontFamily: 'outfit',
-        color: Colors.WHITE,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#0D0D0F',
     },
-
 })

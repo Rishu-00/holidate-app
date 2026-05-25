@@ -41,6 +41,8 @@ export default function RootLayout() {
           options={{ headerShown: false }} />
         <Stack.Screen name="create-trip/generate-trip" 
           options={{ headerShown: false }} />
+        <Stack.Screen name="hotels" 
+          options={{ headerShown: false }} />
       </Stack>
     </CreateTripContext.Provider>
   );

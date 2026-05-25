@@ -1,17 +1,13 @@
-
-import { FlatList, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native'
+import { FlatList, StyleSheet, Text, Alert, TouchableOpacity, View } from 'react-native'
 import React, { useContext, useEffect, useState } from 'react'
-import { Colors } from '@/constants/Colors';
 import { CreateTripContext } from '@/context/CreateTripContext';
 import { useNavigation, useRouter } from 'expo-router';
 import { BudgetOptions } from '@/constants/Options';
 import OptionCard from '@/components/CreateTrip/OptionCard';
 
 export default function SelectBudget() {
-
     const navigation = useNavigation();
     const router = useRouter();
-
 
     const context = useContext(CreateTripContext);
     if (!context) {
@@ -19,21 +15,22 @@ export default function SelectBudget() {
     }
     const { tripData, setTripData } = context;
 
-    const [selectedBudget, setSelectedBudget] = useState<any>(tripData.budget);
-
+    const [selectedBudget, setSelectedBudget] = useState<any>(tripData?.budget);
 
     useEffect(() => {
         navigation.setOptions({
             headerShown: true,
             headerTransparent: true,
             headerTitle: 'Select Budget',
+            headerStyle: { backgroundColor: '#0D0D0F' },
+            headerTintColor: '#F0EEE8',
+            headerTitleStyle: { color: '#F0EEE8', fontWeight: '700' },
         });
     }, []);
 
     const setTripDetails = () => {
-
         if (!selectedBudget) {
-            ToastAndroid.show('Please select a budget.', ToastAndroid.LONG);
+            Alert.alert('Please select a budget category!');
             return;
         }
 
@@ -47,23 +44,40 @@ export default function SelectBudget() {
 
     return (
         <View style={styles.page}>
-            <Text style={styles.title}>Budget</Text>
-            <Text style={styles.subtitle}>Choose spending habits for your trip</Text>
+            <View style={styles.header}>
+                <Text style={styles.title}>What's Your Budget? 💰</Text>
+                <Text style={styles.subtitle}>
+                    Choose your spending preferences for the trip
+                </Text>
+            </View>
+
             <FlatList
                 data={BudgetOptions}
-                renderItem={({ item, index }) => (
+                keyExtractor={(item, index) => index.toString()}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
                     <TouchableOpacity
-                        onPress={() => setSelectedBudget(item)}>
+                        onPress={() => setSelectedBudget(item)}
+                        style={[
+                            styles.optionWrapper,
+                            selectedBudget?.id === item.id && styles.optionWrapperActive
+                        ]}>
                         <OptionCard option={item} selectedOption={selectedBudget} />
                     </TouchableOpacity>
                 )}
+                contentContainerStyle={{ gap: 12 }}
             />
+
             <TouchableOpacity
                 onPress={setTripDetails}
-                style={styles.button}
+                disabled={!selectedBudget}
+                style={[
+                    styles.button,
+                    !selectedBudget && { opacity: 0.5 }
+                ]}
             >
                 <Text style={styles.buttonText}>
-                    Continue
+                    Continue →
                 </Text>
             </TouchableOpacity>
         </View>
@@ -72,33 +86,45 @@ export default function SelectBudget() {
 
 const styles = StyleSheet.create({
     page: {
-        padding: 25,
-        paddingTop: 100,
         flex: 1,
-        backgroundColor: Colors.WHITE,
+        padding: 24,
+        paddingTop: 110,
+        backgroundColor: '#0D0D0F',
+    },
+    header: {
+        marginBottom: 20,
     },
     title: {
-        fontSize: 30,
-        fontFamily: 'outfit-bold',
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#F0EEE8',
+        marginBottom: 4,
     },
     subtitle: {
-        fontSize: 20,
-        fontFamily: 'outfit-medium',
+        fontSize: 14,
+        color: '#6A6865',
+        lineHeight: 20,
+    },
+    optionWrapper: {
+        borderRadius: 14,
+        borderWidth: 0.5,
+        borderColor: '#2A2A30',
+        overflow: 'hidden',
+    },
+    optionWrapperActive: {
+        borderColor: '#C9A84C',
+        backgroundColor: '#C9A84C11',
     },
     button: {
-        backgroundColor: Colors.BLACK,
-        padding: 15,
-        borderRadius: 15,
-        marginTop: 20,
-        width: '100%',
+        backgroundColor: '#C9A84C',
+        padding: 16,
+        borderRadius: 50,
+        marginTop: 24,
         alignItems: 'center',
-        justifyContent: 'center',
-        alignSelf: 'center',
-        elevation: 5,
     },
     buttonText: {
-        fontSize: 17,
-        fontFamily: 'outfit',
-        color: Colors.WHITE,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#0D0D0F',
     },
 });
